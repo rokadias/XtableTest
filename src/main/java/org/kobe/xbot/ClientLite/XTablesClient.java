@@ -38,6 +38,15 @@ import java.util.function.Consumer;
 
 public class XTablesClient {
 
+
+    public static final String XTABLES_CLIENT_VERSION =
+            "XTABLES Client v4.0.0 | Build Date: 11/14/2024";
+
+
+
+    public XTablesClient() {
+        this(1735, true, 10, false);
+    }
     /**
      * Connects to the XTablesServer instance using the system-level DNS resolver and port with direct connection settings.
      *
@@ -186,7 +195,10 @@ public class XTablesClient {
             throw new RuntimeException(e);
         }
     }
+    public XTablesClient(String ip, int port) {
+        initializeClient(ip, port, true, 10, false);
 
+    }
 // ---------------------------------------------------------------
 // ---------------- Methods and Fields ---------------------------
 // ---------------------------------------------------------------
@@ -203,7 +215,7 @@ public class XTablesClient {
     public final List<Consumer<String>> delete_consumers = new ArrayList<>();
 
     private void initializeClient(String SERVER_ADDRESS, int SERVER_PORT, boolean enableZMQ, int MAX_THREADS, boolean useCache) {
-        this.client = new SocketClient(SERVER_ADDRESS, SERVER_PORT, enableZMQ, 10, MAX_THREADS, this);
+        this.client = new SocketClient(SERVER_ADDRESS, SERVER_PORT, enableZMQ, 500, MAX_THREADS, this);
         Thread thread = new Thread(() -> {
             client.connect();
             client.setUpdateConsumer(this::on_update);
@@ -705,8 +717,10 @@ public class XTablesClient {
         Utilities.validateKey(key, true);
         return new RequestAction<>(client, new ResponseInfo(null, MethodType.GET, key).parsed(), String.class);
     }
-
-
+    public RequestAction<String> getRaw(String key) {
+        Utilities.validateKey(key, true);
+        return new RequestAction<>(client, new ResponseInfo(null, MethodType.GET, key).parsed(), null);
+    }
     public RequestAction<Boolean> getBoolean(String key) {
         Utilities.validateKey(key, true);
         return new RequestAction<>(client, new ResponseInfo(null, MethodType.GET, key).parsed(), Boolean.class);
@@ -753,11 +767,6 @@ public class XTablesClient {
         return new RequestAction<>(client, new ResponseInfo(null, MethodType.GET, key).parsed(), Integer.class);
     }
 
-    public <T> RequestAction<ArrayList<T>> getArray(String key, Class<T> type) {
-        Utilities.validateKey(key, true);
-        return new RequestAction<>(client, new ResponseInfo(null, MethodType.GET, key).parsed(), List.class);
-    }
-
 
     public RequestAction<ArrayList<String>> getTables(String key) {
         Utilities.validateKey(key, true);
@@ -771,7 +780,24 @@ public class XTablesClient {
     public RequestAction<ResponseStatus> rebootServer() {
         return new RequestAction<>(client, new ResponseInfo(null, MethodType.REBOOT_SERVER).parsed(), ResponseStatus.class);
     }
+    public RequestAction<LatencyInfo> ping_latency() {
+        return new RequestAction<>(client, new ResponseInfo(null, MethodType.PING).parsed()) {
+            @Override
+            public LatencyInfo parseResponse(long startTime, String result) {
+                RequestInfo info = new RequestInfo(result);
+                if (info.getTokens().length == 2 && info.getTokens()[0].equals("OK")) {
+                    SystemStatistics stats = gson.fromJson(info.getTokens()[1], SystemStatistics.class);
+                    long currentTime = System.nanoTime();
+                    long roundTripLatency = Math.abs(currentTime - startTime);
+                    return new LatencyInfo(((double) roundTripLatency / 2) / 1e6, roundTripLatency / 1e6, stats);
+                } else {
+                    return null;
+                }
 
+            }
+        };
+
+    }
     public <T> RequestAction<T> sendCustomMessage(MethodType method, String message, Class<T> type) {
         return new RequestAction<>(client, new ResponseInfo(null, method, message).parsed(), type);
     }

@@ -9,7 +9,7 @@ import org.kobe.xbot.ClientLite.XTablesClient;
 
 public class ProducerClient {
     public static void main(String[] args) {
-        XTablesClient xclient = new XTablesClient(1735, false, 5, false);
+        XTablesClient xclient = new XTablesClient();
         Coordinate coordinate = new Coordinate(5,5);
         List<Coordinate> coordinates = Collections.singletonList(coordinate);
 

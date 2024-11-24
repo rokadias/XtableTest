@@ -1,0 +1,66 @@
+services:
+  xtables:
+    container_name: "xtables"
+    networks:
+      - xtables-network
+    build:
+      context: ./XtableServer/
+      dockerfile: ./Dockerfile
+    labels:
+      docker-mdns.enable: "true"
+      docker-mdns.host: "XTABLES.local"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+  xdash:
+    container_name: "xdash"
+    networks:
+      - xtables-network
+    depends_on:
+      - xtables
+    build:
+      context: ./XDash
+      dockerfile: ./Dockerfile
+    labels:
+      docker-mdns.enable: "true"
+      docker-mdns.host: "XDASH.local"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+  producer:
+    container_name: "producer"
+    networks:
+      - xtables-network
+    image: "xtable-test"
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    depends_on:
+      - xtables
+    command: -e -Dexec.mainClass="org.saqib.ProducerClient"
+    labels:
+      docker-mdns.enable: "true"
+      docker-mdns.host: "Producer.local"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+  consumer:
+    container_name: "consumer"
+    networks:
+      - xtables-network
+    image: "xtable-test"
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    depends_on:
+      - xtables
+    command: -e -Dexec.mainClass="org.saqib.ConsumerClient"
+    labels:
+      docker-mdns.enable: "true"
+      docker-mdns.host: "Producer.local"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+networks:
+  xtables-network:
+    driver: bridge
