@@ -49,9 +49,6 @@ services:
     networks:
       - xtables-network
     image: "xtable-test"
-    build:
-      context: ./
-      dockerfile: ./Dockerfile
     depends_on:
       - xtables
     command: -e -Dexec.mainClass="org.saqib.ConsumerClient"
